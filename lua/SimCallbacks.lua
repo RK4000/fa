@@ -1,5 +1,5 @@
----- 
----- 
+----
+----
 ---- This module contains the Sim-side lua functions that can be invoked
 ---- from the user side.  These need to validate all arguments against
 ---- cheats and exploits.
@@ -68,9 +68,9 @@ Callbacks.OnControlGroupAssign = function(units)
         local function OnUnitKilled(unit)
             if ScenarioInfo.ControlGroupUnits then
                 for i,v in ScenarioInfo.ControlGroupUnits do
-                   if unit == v then
+                    if unit == v then
                         table.remove(ScenarioInfo.ControlGroupUnits, i)
-                   end 
+                    end
                 end
             end
         end
@@ -79,7 +79,7 @@ Callbacks.OnControlGroupAssign = function(units)
         if not ScenarioInfo.ControlGroupUnits then
             ScenarioInfo.ControlGroupUnits = {}
         end
-        
+
         -- add units to list
         local entities = {}
         for k,v in units do
@@ -90,7 +90,7 @@ Callbacks.OnControlGroupAssign = function(units)
         -- remove units on death
         for k,v in entities do
             SimTriggers.CreateUnitDeathTrigger(OnUnitKilled, v)
-            SimTriggers.CreateUnitReclaimedTrigger(OnUnitKilled, v) --same as killing for our purposes   
+            SimTriggers.CreateUnitReclaimedTrigger(OnUnitKilled, v) --same as killing for our purposes
         end
     end
 end
@@ -103,9 +103,6 @@ local SimCamera = import('/lua/SimCamera.lua')
 
 Callbacks.OnCameraFinish = SimCamera.OnCameraFinish
 
-
-
-
 local SimPlayerQuery = import('/lua/SimPlayerQuery.lua')
 
 Callbacks.OnPlayerQuery = SimPlayerQuery.OnPlayerQuery
@@ -114,35 +111,78 @@ Callbacks.OnPlayerQueryResult = SimPlayerQuery.OnPlayerQueryResult
 
 Callbacks.PingGroupClick = import('/lua/SimPingGroup.lua').OnClickCallback
 
-
-
 Callbacks.AddTarget = function(data, units)
-	
-	if type(data.target) == 'string' then
-		local entity = GetEntityById(data.target)
-		if entity and IsBlip(entity) and entity.GetSource then
-			local blipentity = entity:GetSource()
-			if blipentity then
-				if IsUnit(blipentity) then
-					for id, unit in units or {} do
-						blipentity:addAttacker(unit)
-						unit:addTarget(blipentity)
-					end
-				end
-			end
-		end
-	end
-
-
+    if type(data.target) == 'string' then
+        local entity = GetEntityById(data.target)
+        if entity and IsBlip(entity) and entity.GetSource then
+            local blipentity = entity:GetSource()
+            if blipentity then
+                if IsUnit(blipentity) then
+                    for id, unit in units or {} do
+                        blipentity:addAttacker(unit)
+                        unit:addTarget(blipentity)
+                    end
+                end
+            end
+        end
+    end
 end
 
 Callbacks.ClearTargets = function(data, units)
-	for id, unit in units or {} do	
-		if unit then 
-			unit:clearTarget()
-		end
-	end
-	
+    for id, unit in units or {} do
+        if unit then
+            unit:clearTarget()
+        end
+    end
+
+end
+
+-- Validates that assist orders are acyclic
+--
+-- This callback is issued from two places:
+--    commandmode.lua
+--    commandgraph.lua
+--
+-- Each (unfortunately) with their own parameters.
+--
+-- This is because the commandgraph doesn't get access to proper
+-- unit/rollover information so we can do this in a right manner.
+Callbacks.ValidateAssist = function(data, units)
+    local target = GetEntityById(data.target)
+    if not units then
+        -- Check the rollover unit
+        if IsInvalidAssist(target, target:GetGuardedUnit()) then
+            IssueClearCommands({target})
+        end
+        -- Check any units around the position
+        local x,z = data.worldPos[1], data.worldPos[3]
+        for k,v in GetUnitsInRect(Rect(x-1,z-1, x+1, z+1)) do
+            LOG("Validating: " .. v:GetEntityId())
+            if IsInvalidAssist(v, v:GetGuardedUnit()) then
+                LOG("Invalid")
+                IssueClearCommands({v})
+            else
+                LOG("valid")
+            end
+        end
+    else
+        for k, u in units do
+            if IsEntity(u) and IsInvalidAssist(u, target) then
+                IssueClearCommands({target})
+                return
+            end
+        end
+    end
+end
+
+function IsInvalidAssist(unit, target)
+    if target and target:GetEntityId() == unit:GetEntityId() then
+        return true
+    elseif not target or not target:GetGuardedUnit() then
+        return false
+    else
+        return IsInvalidAssist(unit, target:GetGuardedUnit())
+    end
 end
 
 Callbacks.GiveOrders = import('/lua/spreadattack.lua').GiveOrders

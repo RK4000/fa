@@ -11,6 +11,7 @@ local Construction = import('/lua/ui/game/construction.lua')
 local UIMain = import('/lua/ui/uimain.lua')
 local Orders = import('/lua/ui/game/orders.lua')
 local commandMeshResources = import('/lua/ui/game/commandmeshes.lua').commandMeshResources
+local ValidateAssist = import('/lua/ui/game/validateassist.lua')
 
 --[[
 THESE TABLES ARE NOT ACTUALLY USED IN SCRIPT. Just here for reference
@@ -160,6 +161,10 @@ function OnCommandIssued(command)
         SimCallback(cb, true)
     end
 
+    if command.CommandType == 'Guard' and command.Target.EntityId then
+        local cb = { Func = 'ValidateAssist', Args = { target = command.Target.EntityId } }
+        SimCallback(cb, true)
+    end
 
     if command.CommandType == 'BuildMobile' then
         AddCommandFeedbackBlip({
