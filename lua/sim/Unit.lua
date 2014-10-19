@@ -293,6 +293,54 @@ Unit = Class(moho.unit_methods) {
     OnGotTarget = function(self, Weapon)
     end,
     OnLostTarget = function(self, Weapon)
+        for k, ent in self.WeaponTargets do
+            if not ent:IsDead() then
+                ent:removeWeaponAttacker(self)
+            end
+        end
+    end,
+
+    -- add a list of units attacking this unit with a weapon
+    addAttackerWeapon = function(self, attacker)
+        LOG("Added attacker" .. attacker:GetEntityId())
+        if not attacker:IsDead() then
+            if not table.find(self.WeaponAttackers, attacker) then
+                table.insert(self.WeaponAttackers, attacker)
+            end
+        end
+    end,
+
+    -- that weapon is not longer attacking us.
+    removeWeaponAttacker = function(self, attacker)
+        for k, ent in self.WeaponAttackers do
+            if ent == attacker then
+                table.remove(self.WeaponAttackers, k)
+            end
+        end
+    end,
+
+    -- clear the attack orders if the units got out of sight.
+    stopAttackers = function(self)
+        LOG("Stopattackers called for: "..self:GetEntityId())
+        for k, ent in self.WeaponAttackers do
+            if ent and not ent:IsDead() then
+                LOG("Issuing clear command for: " .. ent:GetEntityId())
+                IssueClearCommands({ent})
+            end
+        end
+    end,
+
+    -- This function make units target again if the unit got an attacker.
+    resumeAttackers = function(self)
+        for k, attacker in self.Attackers do
+            if attacker and not attacker:IsDead() then
+                for j, target in attacker.Targets do
+                    if target == self then
+                        IssueAttack({attacker}, self)
+                    end
+                end
+            end
+        end
     end,
 
     -- Add a target to the weapon list for this unit
