@@ -180,6 +180,9 @@ Blacklist = {
     -- old versions of Experimental Wars
     ['ce6f9860-d2d2-11e0-9572-0800200c9a66'] = UPGRADE,
     
+    -- old versions of RK's Explosions
+    ['90312bd2-6fbd-4aa6-874e-c5057cefc19a'] = UPGRADE, -- RK's Explosions V10
+    
     -- mod pack that was hidden in the vault -> blacklisting to prevent it from being used on faf
     ['fff6f6c8-248a-11de-8c30-362b9e155667'] = HARMFUL,
     ['fff6f6c8-248a-11de-8c30-362b9e100002'] = HARMFUL,
